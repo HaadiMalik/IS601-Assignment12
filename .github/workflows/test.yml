@@ -54,13 +54,13 @@ jobs:
           source venv/bin/activate
           
           # 1) Unit tests
-          pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
+          pytest tests/unit/ --cov=src --cov-fail-under=95 --junitxml=test-results/junit.xml
           
           # 2) Integration tests
-          pytest tests/integration/
+          pytest tests/integration/ --cov=src --cov-fail-under=95
           
           # 3) E2E or other tests
-          pytest tests/e2e/
+          pytest tests/e2e/ --cov=src --cov-fail-under=95
 
   security:
     needs: test
@@ -99,8 +99,8 @@ jobs:
         with:
           push: true
           tags: |
-            kaw393939/601_module9:latest
-            kaw393939/601_module9:${{ github.sha }}
+            haadimalik/assignment12:latest
+            haadimalik/assignment12:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=kaw393939/601_module9:cache
+          cache-from: type=registry,ref=haadimalik/assignment12:cache
           cache-to: type=inline,mode=max
