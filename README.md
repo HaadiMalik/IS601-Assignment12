@@ -1,3 +1,8 @@
+#### [Link to Docker Repo](https://hub.docker.com/r/haadimalik/assignment12)
+
+<br>
+<br>
+
 # 📦 Project Setup
 
 ---
@@ -173,9 +178,7 @@ pip install -r requirements.txt
 
 ---
 
-# 🐳 5. (Optional) Docker Setup
-
-> Skip if Docker isn't used in this module.
+# 🐳 5. Docker Setup
 
 ## Install Docker
 
@@ -212,21 +215,17 @@ python main.py
 docker run -it --rm <image-name>
 ```
 
----
+- **With Docker and Pytest**:
 
-# 📝 7. Submission Instructions
-
-After finishing your work:
-
+In terminal 1
 ```bash
-git add .
-git commit -m "Complete Module X"
-git push origin main
+docker compose up
 ```
 
-Then submit the GitHub repository link as instructed.
-
----
+In terminal  (keep terminal 1 running)
+```bash
+pytest
+```
 
 # 🔥 Useful Commands Cheat Sheet
 
