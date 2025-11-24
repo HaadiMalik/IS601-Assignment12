@@ -2,8 +2,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 from typing import List
-from fastapi import Body, FastAPI, Depends, HTTPException, status
+from fastapi import Body, FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_active_user
@@ -22,6 +23,8 @@ async def lifespan(app: FastAPI):
     print("Tables created successfully!")
     yield
 
+templates = Jinja2Templates(directory="templates")
+
 app = FastAPI(
     title="Calculations API",
     description="API for managing calculations",
@@ -35,6 +38,15 @@ app = FastAPI(
 @app.get("/health", tags=["health"])
 def read_health():
     return {"status": "ok"}
+
+
+# ------------------------------------------------------------------------------
+# Root Endpoint
+# ------------------------------------------------------------------------------
+@app.get("/", tags=["root"])
+def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
 
 # ------------------------------------------------------------------------------
 # User Registration Endpoint
