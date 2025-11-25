@@ -11,6 +11,8 @@ from faker import Faker
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from playwright.sync_api import sync_playwright, Browser, Page
+from unittest import mock
+from sqlalchemy.orm import Session
 
 from app.database import Base, get_engine, get_sessionmaker
 from app.models.user import User
@@ -261,6 +263,17 @@ def pytest_addoption(parser):
     """
     parser.addoption("--preserve-db", action="store_true", help="Keep test database after tests")
     parser.addoption("--run-slow", action="store_true", help="Run tests marked as slow")
+
+
+@pytest.fixture
+def mock_db_session():
+    """Provide a patch for app.main.get_db which returns a mocked Session.
+    Used by tests that need to stub database operations at the FastAPI layer.
+    """
+    with mock.patch("app.main.get_db") as mock_get_db:
+        mock_db = mock.Mock(spec=Session)
+        mock_get_db.return_value = mock_db
+        yield mock_db
 
 def pytest_collection_modifyitems(config, items):
     """

@@ -14,6 +14,9 @@ from sqlalchemy.orm import sessionmaker
 from app.models.user import User
 from tests.conftest import create_fake_user, managed_db_session
 
+from app.schemas.user import UserCreate
+from pydantic import ValidationError
+
 # Use the logger configured in conftest.py
 logger = logging.getLogger(__name__)
 
@@ -325,3 +328,101 @@ def test_error_handling():
             session.execute(text("INVALID SQL"))
     assert "INVALID SQL" in str(exc_info.value)
 
+# ======================================================================================
+# Added Tests
+# ======================================================================================
+
+def test_usercreate_passwords_match():
+    data = {
+        "first_name": "Alice",
+        "last_name": "Smith",
+        "email": "alice.smith@example.com",
+        "username": "alicesmith",
+        "password": "StrongPass1!",
+        "confirm_password": "StrongPass1!",
+    }
+
+    user = UserCreate(**data)
+
+    assert user.password == data["password"]
+    assert user.confirm_password == data["confirm_password"]
+
+
+def test_usercreate_passwords_do_not_match():
+    data = {
+        "first_name": "Bob",
+        "last_name": "Jones",
+        "email": "bob.jones@example.com",
+        "username": "bobjones",
+        "password": "StrongPass1!",
+        "confirm_password": "DifferentPass2@",
+    }
+
+    with pytest.raises(ValidationError, match="Passwords do not match"):
+        UserCreate(**data)
+
+
+# Test fails
+def test_password_length():
+    with pytest.raises(ValidationError) as excinfo:
+        UserCreate(
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            username="testuser",
+            password="Pass1!",
+            confirm_password="Pass1!"
+        )            
+    assert "Password must be at least 8 characters long" in str(excinfo.value)
+
+
+def test_password_uppercase():
+    with pytest.raises(ValidationError) as excinfo:
+        UserCreate(
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            username="testuser",
+            password="password1!",
+            confirm_password="password1!"
+        )
+    assert "Password must contain at least one uppercase letter" in str(excinfo.value)
+
+
+def test_password_lowercase():
+    with pytest.raises(ValidationError) as excinfo:
+        UserCreate(
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            username="testuser",
+            password="PASSWORD1!",
+            confirm_password="PASSWORD1!"
+        )
+    assert "Password must contain at least one lowercase letter" in str(excinfo.value)
+
+
+def test_password_digit():
+    with pytest.raises(ValidationError) as excinfo:
+        UserCreate(
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            username="testuser",
+            password="Password!",
+            confirm_password="Password!"
+        )
+    assert "Password must contain at least one digit" in str(excinfo.value)
+
+
+def test_password_special_char():
+    with pytest.raises(ValidationError) as excinfo:
+        UserCreate(
+            first_name="Test",
+            last_name="User",
+            email="test@example.com",
+            username="testuser",
+            password="Password123",
+            confirm_password="Password123"
+        )
+    assert "Password must contain at least one special character" in str(excinfo.value)

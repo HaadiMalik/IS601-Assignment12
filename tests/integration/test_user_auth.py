@@ -1,10 +1,13 @@
 # tests/integration/test_user_auth.py
 
 import pytest
-from uuid import UUID
-import pydantic_core
-from sqlalchemy.exc import IntegrityError
+from fastapi.testclient import TestClient
+from unittest import mock
+from app.main import app
 from app.models.user import User
+from app.schemas.user import UserCreate
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 
 def test_password_hashing(db_session, fake_user_data):
     """Test password hashing and verification functionality"""
@@ -194,3 +197,88 @@ def test_missing_password_registration(db_session):
     # Adjust the expected error message
     with pytest.raises(ValueError, match="Password must be at least 6 characters long"):
         User.register(db_session, test_data)
+
+
+# ----------------------------------------------------------------
+# Added tests
+# ----------------------------------------------------------------
+
+def test_authentication_with_incorrect_password(db_session, fake_user_data):
+    fake_user_data['password'] = "TestPass123"
+    user = User.register(db_session, fake_user_data)
+    db_session.commit()
+    
+    auth_result = User.authenticate(
+        db_session,
+        fake_user_data['username'],
+        "WrongPassword"
+    )
+    
+    assert auth_result is None
+
+
+@pytest.fixture
+def client():
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest.fixture
+def mock_db_session():
+    with mock.patch("app.main.get_db") as mock_get_db:
+        mock_db = mock.Mock(spec=Session)
+        mock_get_db.return_value = mock_db
+        yield mock_db
+
+
+def test_register_success(client, mock_db_session):
+    user_create_data = {
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "testpassword",
+        "confirm_password": "testpassword",
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    mock_user = mock.Mock(spec=User)
+    mock_user.id = 1
+    mock_user.username = "testuser"
+    mock_user.email = "test@example.com"
+    mock_user.first_name = "Test"
+    mock_user.last_name = "User"
+    
+    with mock.patch.object(User, "register", return_value=mock_user):
+        response = client.post("/auth/register", json=user_create_data)
+        
+        assert response.status_code == 201
+        assert response.json() == {
+            "id": 1,
+            "username": "testuser",
+            "email": "test@example.com",
+            "first_name": "Test",
+            "last_name": "User",
+            "is_active": True,
+            "is_verified": False
+        }
+        
+        mock_db_session.commit.assert_called_once()
+        mock_db_session.refresh.assert_called_once()
+
+
+def test_register_failure(mock_db_session):
+    user_create_data = {
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "testpassword",
+        "confirm_password": "differentpassword",
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    with mock.patch.object(User, "register", side_effect=ValueError("Password mismatch")):
+        client = TestClient(app)
+        response = client.post("/auth/register", json=user_create_data)
+        
+        assert response.status_code == 422
+        assert response.json() == {"detail": "Password mismatch"}
