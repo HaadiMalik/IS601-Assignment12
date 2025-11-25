@@ -14,6 +14,13 @@ from app.schemas.calculation import CalculationBase, CalculationResponse, Calcul
 from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.database import Base, get_db, engine
+from app.operations import add, subtract, multiply, divide
+from pydantic import BaseModel
+
+
+class TwoNumbers(BaseModel):
+    a: float
+    b: float
 
 # Create tables on startup
 @asynccontextmanager
@@ -46,6 +53,34 @@ def read_health():
 @app.get("/", tags=["root"])
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+# ------------------------------------------------------------------------------
+# Lightweight calculator endpoints used by the demo `index.html` (no auth)
+# These accept a JSON body like {"a": 1, "b": 2} and return {"result": <number>}.
+# ------------------------------------------------------------------------------
+@app.post("/add", tags=["demo"])
+def add_endpoint(payload: TwoNumbers = Body(...)):
+    return {"result": add(payload.a, payload.b)}
+
+
+@app.post("/subtract", tags=["demo"])
+def subtract_endpoint(payload: TwoNumbers = Body(...)):
+    return {"result": subtract(payload.a, payload.b)}
+
+
+@app.post("/multiply", tags=["demo"])
+def multiply_endpoint(payload: TwoNumbers = Body(...)):
+    return {"result": multiply(payload.a, payload.b)}
+
+
+@app.post("/divide", tags=["demo"])
+def divide_endpoint(payload: TwoNumbers = Body(...)):
+    try:
+        result = divide(payload.a, payload.b)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"result": result}
 
 
 # ------------------------------------------------------------------------------
